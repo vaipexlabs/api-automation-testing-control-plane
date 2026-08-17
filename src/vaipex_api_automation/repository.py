@@ -111,9 +111,18 @@ class OrderRepository:
             existing = self._orders.get(order_id)
             if existing is None or not self._can_access(principal, existing):
                 return None
+            requested_state = payload.model_dump()
+            current_state = {
+                "product_id": existing.product_id,
+                "quantity": existing.quantity,
+                "priority": existing.priority,
+                "status": existing.status,
+            }
+            if requested_state == current_state:
+                return existing.model_copy(deep=True)
             replacement = existing.model_copy(
                 update={
-                    **payload.model_dump(),
+                    **requested_state,
                     "version": existing.version + 1,
                     "updated_at": self._timestamp(),
                 }

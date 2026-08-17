@@ -146,6 +146,24 @@ async with ApiClient(environment, transport=transport) as client:
 The same client can target the in-process reference API, a locally running
 server, or a compatible remote environment without changing test intent.
 
+## HTTP Semantics Suite
+
+The functional suite validates the complete application-method contract:
+
+- `GET` collection, resource, ownership filtering, and not-found behavior
+- `POST` creation, `201 Created`, `Location`, defaults, and malformed payloads
+- `PUT` complete replacement, required fields, versioning, and idempotent replay
+- `PATCH` partial mutation with preservation of unspecified fields
+- `DELETE` empty `204` response and repeated-delete behavior
+- `HEAD` empty response with resource `ETag` and ownership headers
+- `OPTIONS` empty response with explicit `Allow` and CORS method headers
+
+Run only this suite with:
+
+```bash
+.venv/bin/pytest -q -m functional
+```
+
 ## Toolchain
 
 | Tool | Role |
@@ -185,7 +203,7 @@ Run the repository quality checks:
 - [x] Add the locked Python API-automation toolchain and validation commands.
 - [x] Deliver the deterministic reference API and resource model.
 - [x] Add reusable clients, test-data builders, and environment configuration.
-- [ ] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.
+- [x] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.
 - [ ] Verify `TRACE` and `CONNECT` rejection plus authentication and authorization.
 - [ ] Add contract, negative, boundary, pagination, and caching validation.
 - [ ] Add idempotency, rate-limit, timeout, resilience, and concurrency scenarios.
