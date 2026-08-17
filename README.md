@@ -93,6 +93,33 @@ The demo will start the reference API, execute the complete method and quality
 suite, generate HTML and JUnit evidence, and print the resulting `PASS` or
 `HOLD` decision with its rationale.
 
+## Reference API
+
+The repository includes a deterministic order API with explicit ownership,
+role, and failure contracts. Start it locally:
+
+```bash
+./scripts/start-api.sh
+```
+
+Then open the interactive OpenAPI documentation at
+[http://127.0.0.1:8080/docs](http://127.0.0.1:8080/docs). Use `Control-C` to
+stop the service, or set another port with `PORT=8081 ./scripts/start-api.sh`.
+
+The following non-secret demonstration identities make authorization scenarios
+repeatable:
+
+| Bearer token | Identity | Role |
+| --- | --- | --- |
+| `demo-admin-token` | `admin-001` | Administrator across all resources |
+| `demo-operator-token` | `user-001` | Operator for owned resources |
+| `demo-other-token` | `user-002` | Second ownership boundary |
+| `demo-viewer-token` | `user-003` | Read-only access to owned resources |
+
+Send `X-Vaipex-Failure: dependency`, `rate-limit`, or `timeout` to an order
+request to trigger a deterministic failure response. Administrators can restore
+the three seeded orders with `POST /v1/admin/reset`.
+
 ## Toolchain
 
 | Tool | Role |
@@ -130,7 +157,7 @@ Run the repository quality checks:
 
 - [x] Establish the private repository, licensing, intent, and Vaipex diagrams.
 - [x] Add the locked Python API-automation toolchain and validation commands.
-- [ ] Deliver the deterministic reference API and resource model.
+- [x] Deliver the deterministic reference API and resource model.
 - [ ] Add reusable clients, test-data builders, and environment configuration.
 - [ ] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.
 - [ ] Verify `TRACE` and `CONNECT` rejection plus authentication and authorization.
