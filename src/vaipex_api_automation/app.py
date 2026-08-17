@@ -31,6 +31,8 @@ from vaipex_api_automation.security import authenticate, require_admin, require_
 SERVICE_NAME = "vaipex-api-quality-reference"
 SERVICE_VERSION = "0.1.0"
 SUPPORTED_FAILURES = {"dependency", "rate-limit", "timeout"}
+APPLICATION_METHODS = "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"
+DISABLED_METHODS = {"CONNECT", "TRACE"}
 
 
 def _repository(request: Request) -> OrderRepository:
@@ -91,7 +93,19 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def correlation_id(request: Request, call_next):
         value = request.headers.get("X-Correlation-ID") or f"vaipex-{uuid4()}"
-        response = await call_next(request)
+        if request.method in DISABLED_METHODS:
+            response = JSONResponse(
+                status_code=405,
+                content={
+                    "error": {
+                        "code": "method_not_allowed",
+                        "message": f"{request.method} is disabled by API policy.",
+                    }
+                },
+                headers={"Allow": APPLICATION_METHODS},
+            )
+        else:
+            response = await call_next(request)
         response.headers["X-Correlation-ID"] = value
         response.headers["X-Service-Version"] = SERVICE_VERSION
         return response
@@ -108,10 +122,13 @@ def create_app() -> FastAPI:
             503: "dependency_unavailable",
             504: "dependency_timeout",
         }.get(error.status_code, "request_failed")
+        headers = dict(error.headers or {})
+        if error.status_code in {401, 403}:
+            headers["Cache-Control"] = "no-store"
         return JSONResponse(
             status_code=error.status_code,
             content={"error": {"code": code, "message": str(error.detail)}},
-            headers=error.headers,
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -230,10 +247,8 @@ def create_app() -> FastAPI:
         return Response(
             status_code=204,
             headers={
-                "Allow": "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
-                "Access-Control-Allow-Methods": (
-                    "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"
-                ),
+                "Allow": APPLICATION_METHODS,
+                "Access-Control-Allow-Methods": APPLICATION_METHODS,
             },
         )
 

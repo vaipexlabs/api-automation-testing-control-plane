@@ -164,6 +164,26 @@ Run only this suite with:
 .venv/bin/pytest -q -m functional
 ```
 
+## Security Controls
+
+The security suite treats identity and resource ownership as part of the API
+contract. It verifies:
+
+- missing, invalid, and non-bearer credentials return `401` with a Bearer
+  challenge;
+- viewer identities can read owned resources but cannot modify them;
+- operators cannot discover or mutate another owner's resources;
+- cross-owner and unknown resources produce the same `404` representation;
+- only administrators can reset shared deterministic state;
+- `TRACE` and `CONNECT` return a standardized `405` policy rejection; and
+- authentication and authorization failures include `Cache-Control: no-store`.
+
+Run only the security suite with:
+
+```bash
+.venv/bin/pytest -q -m security
+```
+
 ## Toolchain
 
 | Tool | Role |
@@ -204,7 +224,7 @@ Run the repository quality checks:
 - [x] Deliver the deterministic reference API and resource model.
 - [x] Add reusable clients, test-data builders, and environment configuration.
 - [x] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.
-- [ ] Verify `TRACE` and `CONNECT` rejection plus authentication and authorization.
+- [x] Verify `TRACE` and `CONNECT` rejection plus authentication and authorization.
 - [ ] Add contract, negative, boundary, pagination, and caching validation.
 - [ ] Add idempotency, rate-limit, timeout, resilience, and concurrency scenarios.
 - [ ] Publish HTML, JUnit, and machine-readable quality evidence.
