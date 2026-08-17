@@ -93,7 +93,7 @@ The demo will start the reference API, execute the complete method and quality
 suite, generate HTML and JUnit evidence, and print the resulting `PASS` or
 `HOLD` decision with its rationale.
 
-## Proposed Toolchain
+## Toolchain
 
 | Tool | Role |
 | --- | --- |
@@ -106,10 +106,30 @@ suite, generate HTML and JUnit evidence, and print the resulting `PASS` or
 | Ruff | Static quality enforcement |
 | GitHub Actions | Continuous validation and retained evidence |
 
+Direct dependencies are pinned in `pyproject.toml`; the fully resolved
+transitive dependency graph is committed in `requirements.lock`. Set up the
+complete Python 3.12 environment with one command:
+
+```bash
+./scripts/setup.sh
+```
+
+Validate an existing environment without modifying it:
+
+```bash
+./scripts/validate-toolchain.sh
+```
+
+Run the repository quality checks:
+
+```bash
+./scripts/test.sh
+```
+
 ## Delivery Roadmap
 
 - [x] Establish the private repository, licensing, intent, and Vaipex diagrams.
-- [ ] Add the locked Python API-automation toolchain and validation commands.
+- [x] Add the locked Python API-automation toolchain and validation commands.
 - [ ] Deliver the deterministic reference API and resource model.
 - [ ] Add reusable clients, test-data builders, and environment configuration.
 - [ ] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.

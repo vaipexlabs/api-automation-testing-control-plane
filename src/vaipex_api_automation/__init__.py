@@ -1,0 +1,3 @@
+"""Vaipex API automation testing control plane."""
+
+__version__ = "0.1.0"
