@@ -120,6 +120,32 @@ Send `X-Vaipex-Failure: dependency`, `rate-limit`, or `timeout` to an order
 request to trigger a deterministic failure response. Administrators can restore
 the three seeded orders with `POST /v1/admin/reset`.
 
+## Automation Client
+
+Tests use one asynchronous HTTPX client for authentication, correlation IDs,
+controlled failures, and every order operation. Runtime configuration is read
+from the documented variables in `.env.example` and validated before a request
+is sent.
+
+```python
+import httpx
+
+from vaipex_api_automation.app import create_app
+from vaipex_api_automation.client import ApiClient
+from vaipex_api_automation.config import ApiEnvironment
+from vaipex_api_automation.test_data import OrderPayloadFactory
+
+transport = httpx.ASGITransport(app=create_app())
+environment = ApiEnvironment(base_url="http://vaipex.test")
+payloads = OrderPayloadFactory()
+
+async with ApiClient(environment, transport=transport) as client:
+    response = await client.create_order(payloads.valid())
+```
+
+The same client can target the in-process reference API, a locally running
+server, or a compatible remote environment without changing test intent.
+
 ## Toolchain
 
 | Tool | Role |
@@ -158,7 +184,7 @@ Run the repository quality checks:
 - [x] Establish the private repository, licensing, intent, and Vaipex diagrams.
 - [x] Add the locked Python API-automation toolchain and validation commands.
 - [x] Deliver the deterministic reference API and resource model.
-- [ ] Add reusable clients, test-data builders, and environment configuration.
+- [x] Add reusable clients, test-data builders, and environment configuration.
 - [ ] Test `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, and `OPTIONS`.
 - [ ] Verify `TRACE` and `CONNECT` rejection plus authentication and authorization.
 - [ ] Add contract, negative, boundary, pagination, and caching validation.
