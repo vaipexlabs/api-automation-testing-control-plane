@@ -10,6 +10,7 @@ dist/
 build/
 *.egg-info/
 reports/
+coverage.xml
 artifacts/
 test-results/
 .env

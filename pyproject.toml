@@ -42,6 +42,14 @@ markers = [
     "security: validates authentication, authorization, and method rejection",
 ]
 
+[tool.coverage.run]
+branch = true
+source = ["vaipex_api_automation"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88

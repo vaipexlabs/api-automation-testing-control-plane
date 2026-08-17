@@ -1,0 +1,43 @@
+name: API quality control plane
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install locked dependencies
+        run: ./scripts/setup.sh
+
+      - name: Run the governed API quality gate
+        run: ./scripts/two-minute-demo.sh
+
+      - name: Retain API quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-quality-evidence
+          path: reports/
+          if-no-files-found: error
+          retention-days: 14

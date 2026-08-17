@@ -1,0 +1,7 @@
+{
+  "minimum_coverage_percent": 85,
+  "maximum_failures": 0,
+  "maximum_errors": 0,
+  "decision_on_success": "PASS",
+  "decision_on_failure": "HOLD"
+}

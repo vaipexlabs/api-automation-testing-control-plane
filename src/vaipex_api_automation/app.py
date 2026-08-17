@@ -9,6 +9,7 @@ from fastapi import (
     FastAPI,
     Header,
     HTTPException,
+    Query,
     Request,
     Response,
 )
@@ -22,7 +23,9 @@ from vaipex_api_automation.models import (
     OrderCreate,
     OrderPatch,
     OrderReplace,
+    OrderStatus,
     Principal,
+    Priority,
     ResetResult,
 )
 from vaipex_api_automation.repository import OrderRepository
@@ -165,9 +168,30 @@ def create_app() -> FastAPI:
     def list_orders(
         request: Request,
         principal: Annotated[Principal, Depends(authenticate)],
+        page: Annotated[int, Query(ge=1)] = 1,
+        page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+        status: OrderStatus | None = None,
+        priority: Priority | None = None,
+        sort: Annotated[
+            str,
+            Query(pattern=r"^-?(order_id|quantity|created_at)$"),
+        ] = "order_id",
     ) -> OrderCollection:
-        items = _repository(request).list_for(principal)
-        return OrderCollection(items=items, count=len(items))
+        all_items = _repository(request).list_for(
+            principal,
+            status=status,
+            priority=priority,
+            sort=sort,
+        )
+        start = (page - 1) * page_size
+        items = all_items[start : start + page_size]
+        return OrderCollection(
+            items=items,
+            count=len(items),
+            total=len(all_items),
+            page=page,
+            page_size=page_size,
+        )
 
     @router.post("", response_model=Order, status_code=201)
     def create_order(
@@ -175,9 +199,18 @@ def create_app() -> FastAPI:
         request: Request,
         principal: Annotated[Principal, Depends(require_writer)],
         response: Response,
+        idempotency_key: Annotated[
+            str | None,
+            Header(alias="Idempotency-Key", min_length=8, max_length=128),
+        ] = None,
     ) -> Order:
-        order = _repository(request).create(payload, principal.subject)
+        order, replayed = _repository(request).create(
+            payload,
+            principal.subject,
+            idempotency_key=idempotency_key,
+        )
         response.headers["Location"] = f"/v1/orders/{order.order_id}"
+        response.headers["Idempotency-Replayed"] = str(replayed).lower()
         return order
 
     @router.get("/{order_id}", response_model=Order)
@@ -185,10 +218,17 @@ def create_app() -> FastAPI:
         order_id: str,
         request: Request,
         principal: Annotated[Principal, Depends(authenticate)],
-    ) -> Order:
+        response: Response,
+        if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
+    ) -> Order | Response:
         order = _repository(request).get_for(order_id, principal)
         if order is None:
             raise _not_found()
+        etag = f'"{order.order_id}-v{order.version}"'
+        if if_none_match == etag:
+            return Response(status_code=304, headers={"ETag": etag})
+        response.headers["ETag"] = etag
+        response.headers["Cache-Control"] = "private, max-age=0, must-revalidate"
         return order
 
     @router.put("/{order_id}", response_model=Order)

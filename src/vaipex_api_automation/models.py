@@ -64,6 +64,9 @@ class Order(BaseModel):
 class OrderCollection(BaseModel):
     items: list[Order]
     count: int
+    total: int
+    page: int
+    page_size: int
 
 
 class Health(BaseModel):

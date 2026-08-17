@@ -26,6 +26,7 @@ class OrderRepository:
         with self._lock:
             self._sequence = 3
             self._clock_tick = 3
+            self._idempotency_keys: dict[str, Order] = {}
             self._orders = {
                 "order-001": self._seed_order(
                     "order-001", "user-001", "product-101", 2, Priority.STANDARD, 0
@@ -70,13 +71,29 @@ class OrderRepository:
     def _can_access(principal: Principal, order: Order) -> bool:
         return principal.role is Role.ADMIN or order.owner_id == principal.subject
 
-    def list_for(self, principal: Principal) -> list[Order]:
+    def list_for(
+        self,
+        principal: Principal,
+        *,
+        status: OrderStatus | None = None,
+        priority: Priority | None = None,
+        sort: str = "order_id",
+    ) -> list[Order]:
         with self._lock:
-            return [
+            orders = [
                 order.model_copy(deep=True)
                 for order in self._orders.values()
                 if self._can_access(principal, order)
+                and (status is None or order.status is status)
+                and (priority is None or order.priority is priority)
             ]
+            descending = sort.startswith("-")
+            field = sort.removeprefix("-")
+            return sorted(
+                orders,
+                key=lambda order: getattr(order, field),
+                reverse=descending,
+            )
 
     def get_for(self, order_id: str, principal: Principal) -> Order | None:
         with self._lock:
@@ -85,8 +102,17 @@ class OrderRepository:
                 return None
             return order.model_copy(deep=True)
 
-    def create(self, payload: OrderCreate, owner_id: str) -> Order:
+    def create(
+        self,
+        payload: OrderCreate,
+        owner_id: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> tuple[Order, bool]:
         with self._lock:
+            key = f"{owner_id}:{idempotency_key}" if idempotency_key else None
+            if key and key in self._idempotency_keys:
+                return self._idempotency_keys[key].model_copy(deep=True), True
             self._sequence += 1
             order_id = f"order-{self._sequence:03d}"
             timestamp = self._timestamp()
@@ -102,7 +128,9 @@ class OrderRepository:
                 updated_at=timestamp,
             )
             self._orders[order_id] = order
-            return order.model_copy(deep=True)
+            if key:
+                self._idempotency_keys[key] = order.model_copy(deep=True)
+            return order.model_copy(deep=True), False
 
     def replace(
         self, order_id: str, payload: OrderReplace, principal: Principal

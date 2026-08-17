@@ -83,6 +83,23 @@ class ApiClient:
             **kwargs,
         )
 
+    async def request_with_retry(
+        self,
+        method: str,
+        path: str,
+        *,
+        max_attempts: int = 3,
+        retry_statuses: frozenset[int] = frozenset({429, 503, 504}),
+        **kwargs: Any,
+    ) -> tuple[httpx.Response, int]:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least one.")
+        for attempt in range(1, max_attempts + 1):
+            response = await self.request(method, path, **kwargs)
+            if response.status_code not in retry_statuses or attempt == max_attempts:
+                return response, attempt
+        raise AssertionError("Retry loop did not return a response.")
+
     async def list_orders(self, **kwargs: Any) -> httpx.Response:
         return await self.request("GET", "/v1/orders", **kwargs)
 
